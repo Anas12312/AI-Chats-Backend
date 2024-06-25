@@ -1,4 +1,5 @@
 export type Chat = {
     id: string,
-    name: string
+    name: string,
+    bots?: any[]
 }

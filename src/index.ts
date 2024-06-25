@@ -10,12 +10,17 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // JSON Parser Middleware
-app.use(cors());
 app.use(json());
+app.use(cors());
 
 // Routers Middleware
 app.use('/chat', chatRouter);
 app.use('/bot', botRouter);
+
+app.get('/' , (req, res) => {
+    console.log('a8a');
+    res.send('adasd')
+})
 
 app.listen(port, () => {
     console.log('Server listening on port: ' + port);
