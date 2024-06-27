@@ -23,12 +23,24 @@ export const test: RequestHandler = async (req, res, next) => {
 export const send: RequestHandler<{ id: string, botId: string }> = async (req, res, next) => {
     try {
         const { messages } = req.body;
-        const { id, botId } = req.params
+        const { id, botId } = req.params;
 
-        const bot = await openai.beta.assistants.retrieve(botId);
+        const chat = chats.find(x => x.id);
+
+        if(!chat) {
+            return res.status(404).send('There no chat with this Id');
+        }
+
+        if(!chat.bots?.length) {
+            return res.status(404).send('There is no bots in this chat');
+        }
+
+        const firstBot = chat.bots[0];
+
+        const bot = await openai.beta.assistants.retrieve(firstBot.id);
 
         if (!bot) {
-            return res.status(404);
+            return res.status(404).send('There is no bot with this id');
         }
 
         await openai.beta.threads.messages.create(
@@ -159,7 +171,7 @@ export const addBot: RequestHandler<{ id: string }> = async (req, res, next) => 
             botId = bots.find(x => x.name === botId)?.id;
         }
 
-        const bot = await openai.beta.assistants.retrieve(botId)
+        const bot = await openai.beta.assistants.retrieve(botId);
 
         if (!bot) return res.send(404);
 
@@ -169,9 +181,9 @@ export const addBot: RequestHandler<{ id: string }> = async (req, res, next) => 
 
         setChats(chats.map(x => {
             if (x.id === id) {
-                x.bots = x.bots?.concat({
+                x.bots = x.bots.concat({
                     id: bot.id,
-                    name: bot.name
+                    name: bot.name!
                 })
             }
             return x;
