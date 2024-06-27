@@ -17,11 +17,6 @@ app.use(cors());
 app.use('/chat', chatRouter);
 app.use('/bot', botRouter);
 
-app.get('/' , (req, res) => {
-    console.log('a8a');
-    res.send('adasd')
-})
-
 app.listen(port, () => {
     console.log('Server listening on port: ' + port);
 })

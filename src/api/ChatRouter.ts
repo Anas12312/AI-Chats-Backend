@@ -5,14 +5,16 @@ const chatRouter = Router();
 
 chatRouter.get('/', ChatController.getAll);
 
-chatRouter.get('/:id', ChatController.get);
+// chatRouter.get('/:id', ChatController.get);
 
 chatRouter.post('/', ChatController.create);
 
 chatRouter.delete('/:id', ChatController.del);
 
-chatRouter.post('/:id/send', ChatController.sned);
+chatRouter.post('/:id/send/:botId', ChatController.send);
 
-chatRouter.post('/:id/add-bot/:botId', ChatController.addBot);
+chatRouter.post('/:id/add-bot', ChatController.addBot);
+
+chatRouter.get('/:id', ChatController.getBots);
 
 export default chatRouter;

@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import openai, { chats, setChats } from "../openai/opanai";
+import openai, { bots, chats, setChats } from "../openai/opanai";
 import { Chat } from "../types/Chat";
 
 export const test: RequestHandler = async (req, res, next) => {
@@ -20,22 +20,46 @@ export const test: RequestHandler = async (req, res, next) => {
 
 }
 
-export const sned: RequestHandler<{ id: string }> = async (req, res, next) => {
+export const send: RequestHandler<{ id: string, botId: string }> = async (req, res, next) => {
     try {
-        const { message } = req.body;
-        const { id } = req.params
+        const { messages } = req.body;
+        const { id, botId } = req.params
+
+        const bot = await openai.beta.assistants.retrieve(botId);
+
+        if (!bot) {
+            return res.status(404);
+        }
 
         await openai.beta.threads.messages.create(
             id,
             {
                 role: 'user',
-                content: message
+                content: messages
             }
         )
 
         // Run 
+        let run = await openai.beta.threads.runs.createAndPoll(
+            id,
+            {
+                assistant_id: bot.id
+            }
+        )
 
-        return res.send('Hello');
+        if (run.status === 'completed') {
+            const messages = await openai.beta.threads.messages.list(
+                run.thread_id
+            );
+
+            console.log((messages.data[0].content[0] as any).text.value);
+
+            return res.send((messages.data[0].content[0] as any).text.value);
+        } else {
+            console.log(run.status);
+
+            return res.status(500).send();
+        }
     }
     catch (e) {
         next(e);
@@ -50,11 +74,11 @@ export const create: RequestHandler = async (req, res, next) => {
         // Create Thread
         const thread = await openai.beta.threads.create();
 
-        console.log(name);
 
         chats.push({
             name,
-            id: thread.id
+            id: thread.id,
+            bots: []
         })
 
         return res.send(chats);
@@ -112,37 +136,51 @@ export const getAll: RequestHandler = async (req, res, next) => {
     }
 }
 
-export const addBot: RequestHandler<{ id: string, botId: string }> = async (req, res, next) => {
+export const getBots: RequestHandler<{ id: string }> = async (req, res, next) => {
     try {
-        const { id, botId } = req.params;
+        const { id } = req.params;
+
+        const bots = chats.find(x => x.id === id)?.bots;
+
+        return res.send(bots?.length ? bots : []);
+    }
+    catch (e) {
+        next(e)
+    }
+}
+
+export const addBot: RequestHandler<{ id: string }> = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        let { botId } = req.body;
+
+
+        if (!botId.startsWith('asst_')) {
+            botId = bots.find(x => x.name === botId)?.id;
+        }
 
         const bot = await openai.beta.assistants.retrieve(botId)
 
         if (!bot) return res.send(404);
 
-        const chat = await openai.beta.assistants.retrieve(id);
+        const chat = await openai.beta.threads.retrieve(id);
 
         if (!chat) return res.send(404);
 
-        let botList
-
         setChats(chats.map(x => {
             if (x.id === id) {
-                botList = x.bots?.concat({
+                x.bots = x.bots?.concat({
                     id: bot.id,
                     name: bot.name
                 })
-                x.bots = botList
             }
             return x;
         }))
 
-        return res.send({
-            botList
-        });
+        return res.send();
 
     }
     catch (e) {
-        next(e)
+        res.status(404).send()
     }
 }
